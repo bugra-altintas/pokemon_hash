@@ -79,8 +79,14 @@ public class CengBucket {
 		System.out.println("\t\t\"bucket\": {");
 		System.out.println("\t\t\t\"hashLength\": " + localDepth);
 		System.out.println("\t\t\t\"pokes\": [");
-		for (CengPoke p: pokes) {
-			p.print();
+		int size = pokes.size();
+		for(int i=0; i<size;i++){
+			pokes.get(i).print();
+			if(!(i == size-1)){
+				System.out.println(",");
+				continue;
+			}
+			System.out.println();
 		}
 		System.out.println("\t\t\t]");
 		System.out.println("\t\t}");

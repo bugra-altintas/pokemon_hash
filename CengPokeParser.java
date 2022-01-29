@@ -47,25 +47,20 @@ public class CengPokeParser {
 			String[] fields = command.split("\t");
 			switch (fields[0]){
 				case "add":
-					//System.out.println("Adding");
 					CengPoke poke = new CengPoke(Integer.parseInt(fields[1]),fields[2],fields[3],fields[4]);
 					CengPokeKeeper.addPoke(poke);
 					break;
 				case "search":
-					//System.out.println("Searching");
 					CengPokeKeeper.searchPoke(Integer.parseInt(fields[1]));
 					break;
 				case "delete":
-					//System.out.println("Deleting");
 					CengPokeKeeper.deletePoke(Integer.parseInt(fields[1]));
 					break;
 				case "print":
-					//System.out.println("Printing");
 					CengPokeKeeper.printEverything();
 					break;
 				case "quit":
 				default:
-					//System.out.println("Quitting");
 					return;
 			}
 

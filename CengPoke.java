@@ -40,13 +40,20 @@ public class CengPoke {
 	}
 		
 	// Own Methods
+	public static int log(int x, int b) {
+		return (int) (Math.log(x) / Math.log(b));
+	}
 	public void print(){
 		System.out.println("\t\t\t\t\"poke\": {");
-		System.out.println("\t\t\t\t\t\"hash\": " + (int) pokeKey % CengPokeKeeper.getHashMod() + ",");
-		System.out.println("\t\t\t\t\t\"pokeKey\": " + pokeKey);
-		System.out.println("\t\t\t\t\t\"pokeName\": " + pokeName);
-		System.out.println("\t\t\t\t\t\"pokePower\": " + pokePower);
+		String binary = Integer.toBinaryString((int) pokeKey % CengPokeKeeper.getHashMod());
+		int diff = log(CengPokeKeeper.getHashMod(),2) - binary.length();
+		for(int i=0;i<diff;i++)
+			binary = '0' + binary;
+		System.out.println("\t\t\t\t\t\"hash\": " + binary + ",");
+		System.out.println("\t\t\t\t\t\"pokeKey\": " + pokeKey + ",");
+		System.out.println("\t\t\t\t\t\"pokeName\": " + pokeName + ",");
+		System.out.println("\t\t\t\t\t\"pokePower\": " + pokePower + ",");
 		System.out.println("\t\t\t\t\t\"pokeType\": " + pokeType);
-		System.out.println("\t\t\t\t}");
+		System.out.print("\t\t\t\t}");
 	}
 }

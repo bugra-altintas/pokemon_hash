@@ -2,43 +2,36 @@ import java.util.ArrayList;
 
 public class CengHashTable {
 	private int globalDepth;
+	private int empty;
 	private ArrayList<CengHashRow> directories;
 	public CengHashTable()
 	{
 		// TODO: Create a hash table with only 1 row.
 		this.globalDepth = 0;
+		this.empty = 0;
 		this.directories = new ArrayList<CengHashRow>();
 		CengHashRow firstRow = new CengHashRow();
 		this.directories.add(firstRow);
 		//create the container
-		System.out.println("Hash Table Created!");
 	}
 	public int getGlobalDepth() {
 		return globalDepth;
 	}
 
-	public void setGlobalDepth(int globalDepth) {
-		this.globalDepth = globalDepth;
-	}
-
 	public void incrGlobalDepth() {
 		this.globalDepth++;
 	}
-
-	public ArrayList<CengHashRow> getDirectories() {
-		return directories;
-	}
-
-	public void setDirectories(ArrayList<CengHashRow> directories) {
-		this.directories = directories;
-	}
-
-
+	public void incrEmpty(){ this.empty++; }
 
 	public void deletePoke(Integer pokeKey)
 	{
 		int hashValue = (int) pokeKey % CengPokeKeeper.getHashMod();
-		CengHashRow row = rowAtIndex(hashValue);
+		String binary = Integer.toBinaryString(hashValue);
+		int diff = log(CengPokeKeeper.getHashMod(),2) - binary.length();
+		for(int i=0;i<diff;i++)
+			binary = '0' + binary;
+		String x = globalDepth > 0 ? binary.substring(0,this.globalDepth) : "0";
+		CengHashRow row = rowAtIndex(Integer.parseInt(x,2));
 		ArrayList<CengPoke> p = new ArrayList<>(row.getBucket().getPokes());
 		boolean found = false;
 		for(int i=0;i<p.size();i++){
@@ -52,62 +45,62 @@ public class CengHashTable {
 			System.out.println("}");
 			return;
 		}
-		String zeros = "";
-		int diff = globalDepth - row.getBucket().getLocalDepth(); //make last diff bits zero
-		for(int i=0;i<diff;i++)
-			zeros += '0';
 		String hashPref = row.hashPrefix();
-		String index_base = hashPref.substring(0,row.getBucket().getLocalDepth()) + zeros;
-		int base = Integer.parseInt(index_base,2);
-		int count = 0;
-		for(int i=0;i<Math.pow(2,diff);i++){
-			CengHashRow r = rowAtIndex(base+i);
+		int localDepth = row.getBucket().getLocalDepth();
+		String basePref = hashPref.substring(0,localDepth);
+		for(int i=0;i<getGlobalDepth() - localDepth;i++)
+			basePref += "0";
+		if(globalDepth == 0) basePref = "0";
+		int base = Integer.parseInt(basePref,2);
+		int row_count = (int) Math.pow(2,getGlobalDepth()-localDepth);
+		boolean emptied = false;
+		for(int i=base;i<base+row_count;i++){
+			CengHashRow r = rowAtIndex(i);
 			CengBucket bucket = r.getBucket();
 			bucket.removePoke(pokeKey);
-			if(bucket.getPokes().size() == 0) count++;
+			if(bucket.getPokes().size() == 0) emptied = true;
 			r.setBucket(bucket);
-			directories.set(base+i,r);
+			directories.set(i,r);
 		}
+		if(emptied) incrEmpty();
 		System.out.println("\"delete\": {");
-		System.out.println("\t\"emptyBucketNum\": " + count);
+		System.out.println("\t\"emptyBucketNum\": " + empty);
 		System.out.println("}");
 		// TODO: Empty Implementation
 	}
 
 	public void addPoke(CengPoke poke)
 	{
-		//System.out.println("Adding: " + poke.pokeKey());
 		String hashPrefix = hash(poke.pokeKey());
 		if(this.globalDepth != 0){//implement
 			int index = Integer.parseInt(hashPrefix,2);//index of hashrow
 			CengHashRow row = rowAtIndex(index);
-			//System.out.println("Adding to: " + directories.get(index).hashPrefix());
-			if(row.getBucket().getPokes().size() == CengPokeKeeper.getBucketSize()){
-				//implement
+			if(row.getBucket().getPokes().size() >= CengPokeKeeper.getBucketSize()){
 				boolean flag = split(index,poke);
-				if(!flag){
-					System.out.println("Redistribution did not occur! Adding again");
+				if(!flag)//Redistribution did not occur! Adding again
 					addPoke(poke);
-				}
 			}
 			else{
-				row.addPoke(poke);
-				directories.set(index,row);
-				int ld = row.getBucket().getLocalDepth();
-				if(globalDepth > ld){
-					for(int i = 1;i<Math.pow(2,globalDepth-ld);i++){
-						CengHashRow rowi = rowAtIndex(index+i);
-						rowi.addPoke(poke);
-						directories.set(index+i,rowi);
-					}
+				int localDepth = row.getBucket().getLocalDepth();
+				String hashPref = row.hashPrefix();
+				String basePref = hashPref.substring(0,localDepth);
+				for(int i=0;i<getGlobalDepth() - localDepth;i++)
+					basePref += "0";
+				int base = Integer.parseInt(basePref,2);
+				int row_count = (int) Math.pow(2,getGlobalDepth()-localDepth);
+				for(int i = base; i<base+row_count;i++){
+					CengHashRow rowi = rowAtIndex(i);
+					rowi.addPoke(poke);
+					directories.set(i,rowi);
 				}
 			}
 		}
 		else{
 			CengHashRow row = rowAtIndex(0);
 			if(row.getBucket().getPokes().size() == CengPokeKeeper.getBucketSize()){
-				//implement
 				boolean flag = split(0,poke);
+				if(!flag)//Redistribution did not occur! Adding again
+					addPoke(poke);
 			}
 			else{
 				row.addPoke(poke);
@@ -117,9 +110,7 @@ public class CengHashTable {
 		// TODO: Empty Implementation
 	}
 	public boolean split(int index,CengPoke poke){
-		//System.out.println("Splitting index: " + index);
 		CengHashRow row1 = rowAtIndex(index);
-		//System.out.println("HASHPREF: " + row1.hashPrefix());
 		if(row1.getBucket().getLocalDepth() == getGlobalDepth()){ //enlarge the table
 			incrGlobalDepth();
 			row1.incrLocalDepth();
@@ -143,95 +134,76 @@ public class CengHashTable {
 			return row2.getBucket().getPokes().size() != 0 && row1.getBucket().getPokes().size() != 0 ;//redistribution successful or failed
 		}
 		else{//do not enlarge the hashtable
-			//implement
-			String zeros = "";
-			String zeros2 = "";
-			int diff = globalDepth - row1.getBucket().getLocalDepth(); //make last diff bits zero
-			for(int i=0;i<diff;i++)
-				zeros += '0';
-			for(int i=0;i<diff-1;i++)
-				zeros2 += '0';
-			//System.out.println(zeros + " - " + zeros2);
+			int localDepth = row1.getBucket().getLocalDepth();
+			boolean flag = false;
 			String hashPref = row1.hashPrefix();
-			String basepref = hashPref.substring(0,row1.getBucket().getLocalDepth()) + zeros;
-			String index_basepref = hashPref.substring(0,row1.getBucket().getLocalDepth()+1) + zeros2;
-			//System.out.println("HashPref: " + hashPref + " Local depth:" + row1.getBucket().getLocalDepth());
-			//System.out.println("Base pref: " + basepref + " Index_base: " + index_basepref);
-			row1.incrLocalDepth();
-			CengBucket bucket2 = new CengBucket(row1.getBucket().getLocalDepth());
-			CengHashRow row2 = new CengHashRow(row1.hashPrefix(), bucket2); //to change
-			//row1.setHashPrefix(pref);
-			int base = Integer.parseInt(basepref,2);
-			int index_base = Integer.parseInt(index_basepref,2);
-			//System.out.println("base: " + base + " index_base:" + index_base);
-			row1 = rowAtIndex(base);
-			row1.incrLocalDepth();
-			redistribute(row1,row2,poke);
-			//update related entries
-			directories.set(index,row2);
-			directories.set(base,row1);
-			//hope it works
-			CengBucket bucketn = new CengBucket(row1.getBucket());
-			base++;
-			while(base != index_base){
-				CengHashRow rown = rowAtIndex(base);
-				rown.incrLocalDepth();
-				rown.setBucket(bucketn);
-				directories.set(base,rown);
-				base++;
+			String basePref = hashPref.substring(0,localDepth);
+			for(int i=0;i<getGlobalDepth() - localDepth;i++)
+				basePref += "0";
+			int base = Integer.parseInt(basePref,2);
+			int last = base + (int) Math.pow(2,getGlobalDepth()-localDepth) - 1;
+			String lastPref = Integer.toBinaryString(last);
+			int diff = getGlobalDepth() - lastPref.length();
+			for(int i=0;i<diff;i++)
+				lastPref = '0' + lastPref;
+			CengHashRow base_row = new CengHashRow(rowAtIndex(base));
+			base_row.incrLocalDepth();
+			CengBucket bucket_new = new CengBucket(base_row.getBucket().getLocalDepth());
+			CengHashRow last_row = new CengHashRow(lastPref,bucket_new);
+			redistribute(base_row,last_row,poke);
+			flag = base_row.getBucket().getPokes().size() != 0 && last_row.getBucket().getPokes().size() != 0 ;
+			int row_count = (int) Math.pow(2,getGlobalDepth()-base_row.getBucket().getLocalDepth());
+			int i;
+			for(i = base;i<base+row_count;i++){//handle the other rows in same group
+				CengHashRow row = new CengHashRow(rowAtIndex(i).hashPrefix(),base_row.getBucket());
+				directories.set(i, row);
 			}
-			while(index_base != index){
-				CengHashRow rown = rowAtIndex(index_base);
-				rown.incrLocalDepth();
-				rown.setBucket(bucketn);
-				directories.set(index_base,rown);
-				index_base++;
+			for(;i<=last;i++) {
+				CengHashRow row = new CengHashRow(rowAtIndex(i).hashPrefix(), last_row.getBucket());
+				directories.set(i, row);
 			}
+			return flag;
 		}
-		return true;
 	}
 	public void redistribute(CengHashRow row1, CengHashRow row2, CengPoke poke){
-		ArrayList<CengHashRow> rows = new ArrayList<CengHashRow>(2);
+		int localDepth = row1.getBucket().getLocalDepth();
 		CengBucket bucket1 = row1.getBucket();
 		ArrayList<CengPoke> bucketx = new ArrayList<CengPoke>(bucket1.getPokes());
 		CengBucket bucket2 = row2.getBucket();
-		//System.out.println("Redist: bucket1: " + bucket1.pokeAtIndex(0).pokeKey());
 		int size = CengPokeKeeper.getBucketSize();
 		for(int i=0;i<size;i++){//distribute pokes in bucket1
-			//System.out.println("Bucket_x size: "+bucketx.size());
-			String hashPrefix = hash(bucketx.get(i).pokeKey());
-			//System.out.println("Checking: " + bucketx.get(i).pokeKey() + " HashPrefix: " + hashPrefix);
-			if(hashPrefix.equals(row2.hashPrefix())){
+			String hashPrefix = hash(bucketx.get(i).pokeKey()).substring(0,localDepth);
+			if(row2.hashPrefix().startsWith(hashPrefix)){
 				bucket2.addPoke(bucketx.get(i));// update other rows pointing to that bucket
 				bucket1.getPokes().remove(bucketx.get(i)); //update other rows pointing to that bucket
 			}
 		}
 		//place the new poke
-		String hashPrefix = hash(poke.pokeKey());
-		System.out.println("Hash Prefix of poke: " + hashPrefix);
-		System.out.println("Hash Prefixx of row1: " + row1.hashPrefix() +" row2: " + row2.hashPrefix());
-		if(hashPrefix.equals(row1.hashPrefix())){
+		String hashPrefix = hash(poke.pokeKey()).substring(0,localDepth);
+		if(row1.hashPrefix().startsWith(hashPrefix)){
 			if(row1.getBucket().getPokes().size() < size){
 				bucket1.addPoke(poke);//update other buckets pointing to that bucket
 			}
 		}
-		else if(hashPrefix.equals(row2.hashPrefix())){
+		else if(row2.hashPrefix().startsWith(hashPrefix)){
 			if(row2.getBucket().getPokes().size() < size){
 				bucket2.addPoke(poke);//update other buckets pointing to that bucket
 			}
 		}
 		row1.setBucket(bucket1);
 		row2.setBucket(bucket2);
-		rows.add(row1);
-		rows.add(row2);
-		//return rows;
 	}
 
 	
 	public void searchPoke(Integer pokeKey)
 	{
 		int hashValue = (int) pokeKey % CengPokeKeeper.getHashMod();
-		CengHashRow row = rowAtIndex(hashValue);
+		String binary = Integer.toBinaryString(hashValue);
+		int diff = log(CengPokeKeeper.getHashMod(),2) - binary.length();
+		for(int i=0;i<diff;i++)
+			binary = '0' + binary;
+		String x = globalDepth > 0 ? binary.substring(0,this.globalDepth) : "0";
+		CengHashRow row = rowAtIndex(Integer.parseInt(x,2));
 		ArrayList<CengPoke> p = new ArrayList<>(row.getBucket().getPokes());
 		boolean found = false;
 		for(int i=0;i<p.size();i++){
@@ -245,42 +217,27 @@ public class CengHashTable {
 			System.out.println("}");
 			return;
 		}
-		String zeros = "";
-		int diff = globalDepth - row.getBucket().getLocalDepth(); //make last diff bits zero
-		for(int i=0;i<diff;i++)
-			zeros += '0';
+		int localDepth = row.getBucket().getLocalDepth();
 		String hashPref = row.hashPrefix();
-		String index_base = hashPref.substring(0,row.getBucket().getLocalDepth()) + zeros;
-		int base = Integer.parseInt(index_base,2);
-		for(int i=0;i<Math.pow(2,diff);i++){
-			CengHashRow r = rowAtIndex(base+i);
+		String basePref = hashPref.substring(0,localDepth);
+		for(int i=0;i<getGlobalDepth() - localDepth;i++)
+			basePref += "0";
+		if(globalDepth == 0) basePref = "0";
+		int base = Integer.parseInt(basePref,2);
+		int row_count = (int) Math.pow(2,getGlobalDepth()-localDepth);
+		for(int i=base;i<base+row_count;i++){
+			CengHashRow r = rowAtIndex(i);
+			r.setVisited();
 			r.print();
+			if(!(i==base+row_count-1)){
+				System.out.println(",");
+				continue;
+			}
+			System.out.println();
 		}
 		System.out.println("}");
 		// TODO: Empty Implementation
 	}
-	
-	public void print()
-	{
-		System.out.println("\"table\": {");
-		for (CengHashRow r: directories) {
-			r.print();
-		}
-		System.out.println("}");
-		// TODO: Empty Implementation
-	}
-	public static int log(int x, int b) {
-		return (int) (Math.log(x) / Math.log(b));
-	}
-	public String hash (Integer pokeKey){
-		int hashValue = (int) pokeKey % CengPokeKeeper.getHashMod();
-		String binary = Integer.toBinaryString(hashValue);
-		int diff = log(CengPokeKeeper.getHashMod(),2) - binary.length();
-		for(int i=0;i<diff;i++)
-			binary = '0' + binary;
-		return binary.substring(0,this.globalDepth);
-	}
-
 	// GUI-Based Methods
 	// These methods are required by GUI to work properly.
 	
@@ -303,6 +260,32 @@ public class CengHashTable {
 	}
 	
 	// Own Methods
+	public void print()
+	{
+		System.out.println("\"table\": {");
+		int size = directories.size();
+		for(int i = 0;i<size;i++){
+			directories.get(i).print();
+			if(!(i == size-1)){
+				System.out.println(",");
+				continue;
+			}
+			System.out.println();
+		}
+		System.out.println("}");
+		// TODO: Empty Implementation
+	}
+	public static int log(int x, int b) {
+		return (int) (Math.log(x) / Math.log(b));
+	}
+	public String hash (Integer pokeKey){
+		int hashValue = (int) pokeKey % CengPokeKeeper.getHashMod();
+		String binary = Integer.toBinaryString(hashValue);
+		int diff = log(CengPokeKeeper.getHashMod(),2) - binary.length();
+		for(int i=0;i<diff;i++)
+			binary = '0' + binary;
+		return binary.substring(0,this.globalDepth);
+	}
 
 
 }

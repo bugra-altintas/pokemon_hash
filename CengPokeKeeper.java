@@ -46,7 +46,6 @@ public class CengPokeKeeper {
 		hashTable = new CengHashTable();
 		
 		CengPokeParser.startParsingCommandLine();
-		System.out.println("Program finished!");
 	}
 
 	public static CengHashTable getHashTable()
