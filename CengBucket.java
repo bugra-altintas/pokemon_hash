@@ -5,20 +5,24 @@ public class CengBucket {
 	private int localDepth;
 	private ArrayList<CengPoke> pokes;
 	private boolean visited;
+	private boolean emptied;//change
 	public CengBucket() {
 		this.localDepth = 0;
 		this.pokes = new ArrayList<CengPoke>(CengPokeKeeper.getBucketSize());
 		this.visited = false;
+		this.emptied = false;
 	}
 	public CengBucket(int localDepth) {
 		this.localDepth = localDepth;
 		this.pokes = new ArrayList<CengPoke>(CengPokeKeeper.getBucketSize());
 		this.visited = false;
+		this.emptied = false;
 	}
 	public CengBucket(CengBucket bucket){
 		this.localDepth = bucket.getLocalDepth();
 		this.pokes = new ArrayList<CengPoke>(bucket.getPokes());
 		this.visited = bucket.isVisited();
+		this.emptied = false;
 	}
 	public int getLocalDepth() {
 		return localDepth;
@@ -28,7 +32,7 @@ public class CengBucket {
 		this.localDepth = localDepth;
 	}
 	public void incrLocalDepth(){ this.localDepth++; }
-
+	public boolean getEmptied()  { return this.emptied; }
 	public ArrayList<CengPoke> getPokes() {
 		return pokes;
 	}
@@ -37,7 +41,9 @@ public class CengBucket {
 		this.pokes = pokes;
 	}
 
-	public void addPoke(CengPoke poke){ pokes.add(poke); }
+	public void addPoke(CengPoke poke){
+		pokes.add(poke);
+	}
 	public void removePoke( Integer pokeKey) {
 		int i=0;
 		for(;i<pokes.size();i++){
@@ -45,7 +51,9 @@ public class CengBucket {
 				break;
 		}
 		pokes.remove(i);
+		if(pokes.size() == 0) emptied = true;
 	}
+	public int getSize(){ return pokes.size();}
 
 	// GUI-Based Methods
 	// These methods are required by GUI to work properly.
@@ -77,7 +85,7 @@ public class CengBucket {
 	// Own Methods
 	public void print(){
 		System.out.println("\t\t\"bucket\": {");
-		System.out.println("\t\t\t\"hashLength\": " + localDepth);
+		System.out.println("\t\t\t\"hashLength\": " + localDepth + ",");
 		System.out.println("\t\t\t\"pokes\": [");
 		int size = pokes.size();
 		for(int i=0; i<size;i++){

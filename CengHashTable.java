@@ -22,6 +22,7 @@ public class CengHashTable {
 		this.globalDepth++;
 	}
 	public void incrEmpty(){ this.empty++; }
+	public void decrEmpty(){ this.empty--; }
 
 	public void deletePoke(Integer pokeKey)
 	{
@@ -41,7 +42,8 @@ public class CengHashTable {
 			}
 		}
 		if(!found){
-			System.out.println("\"search\": {");
+			System.out.println("\"delete\": {");
+			System.out.println("\t\"emptyBucketNum\": " + empty);
 			System.out.println("}");
 			return;
 		}
@@ -58,7 +60,7 @@ public class CengHashTable {
 			CengHashRow r = rowAtIndex(i);
 			CengBucket bucket = r.getBucket();
 			bucket.removePoke(pokeKey);
-			if(bucket.getPokes().size() == 0) emptied = true;
+			emptied = bucket.getEmptied();
 			r.setBucket(bucket);
 			directories.set(i,r);
 		}
@@ -87,9 +89,10 @@ public class CengHashTable {
 				for(int i=0;i<getGlobalDepth() - localDepth;i++)
 					basePref += "0";
 				int base = Integer.parseInt(basePref,2);
+				if(rowAtIndex(base).getBucket().getEmptied())  decrEmpty();
 				int row_count = (int) Math.pow(2,getGlobalDepth()-localDepth);
-				for(int i = base; i<base+row_count;i++){
-					CengHashRow rowi = rowAtIndex(i);
+				for(int i = base; i<base+row_count;i++){//changes
+					CengHashRow rowi = new CengHashRow(rowAtIndex(i));
 					rowi.addPoke(poke);
 					directories.set(i,rowi);
 				}

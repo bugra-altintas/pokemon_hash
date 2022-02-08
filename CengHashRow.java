@@ -35,7 +35,6 @@ public class CengHashRow {
 	public String hashPrefix()
 	{
 		// TODO: Return row's hash prefix (such as 0, 01, 010, ...)
-
 		return hashPrefix;
 	}
 	
@@ -52,9 +51,15 @@ public class CengHashRow {
 	}
 	
 	// Own Methods
-	public void print(){
+	public void print(){ //change here, about printing hashPrefix and comma at the end
+		String pref = hashPrefix();
 		System.out.println("\t\"row\": {");
-		System.out.println("\t\t\"hashPref\": " + hashPrefix());
+		if(pref != ""){
+			System.out.println("\t\t\"hashPref\": " + pref + ",");
+		}
+		else{
+			System.out.println("\t\t\"hashPref\": " + "0" + ",");
+		}
 		bucket.print();
 		System.out.print("\t}");
 	}
